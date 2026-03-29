@@ -3,10 +3,6 @@ package com.innowise.auth.controller;
 import com.innowise.security.jwt.dto.AuthRequest;
 import com.innowise.security.jwt.dto.JwtResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
 
 public interface AuthController {
 
