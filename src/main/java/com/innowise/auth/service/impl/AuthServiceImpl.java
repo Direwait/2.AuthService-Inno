@@ -7,13 +7,16 @@ import com.innowise.auth.database.model.RefreshTokenModel;
 import com.innowise.auth.database.model.UserCredential;
 import com.innowise.auth.service.AuthService;
 import com.innowise.auth.service.UserCredentialService;
+import com.innowise.auth.util.JwtTokenUtil;
 import com.innowise.exception.TokenExpiredException;
 import com.innowise.exception.TokenRevokedException;
 import com.innowise.exception.TokenValidationException;
+import com.innowise.exception.UserAlreadyExistsException;
 import com.innowise.security.jwt.CustomUserDetails;
 import com.innowise.security.jwt.JwtService;
 import com.innowise.security.jwt.dto.JwtResponse;
 import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.factory.RefreshTokenFactory;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,14 +26,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    private final JwtTokenUtil jwtTokenUtil;
+    private final RefreshTokenFactory refreshTokenFactory;
     private final UserCredentialRepository userCredentialRepository;
     private final UserCredentialService userCredentialService;
     private final JwtService jwtService;
@@ -40,14 +43,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     @Override
-    public JwtResponse saveUserCredentials(AuthRequest request) {
+    public JwtResponse saveUserCredentials(AuthRequest request, Role role) {
         if (userCredentialRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("User with username '" + request.getUsername() + "' already exists");
+            throw new UserAlreadyExistsException("User with username '" + request.getUsername() + "' already exists");
         }
         UserCredential user = UserCredential.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
+                .role(role)
                 .build();
 
         UserCredential savedUser = userCredentialRepository.save(user);
@@ -58,13 +61,7 @@ public class AuthServiceImpl implements AuthService {
                 savedUser.getId(),
                 savedUser.getRole().name()
         );
-        RefreshTokenModel refreshTokenEntity = RefreshTokenModel.builder()
-                .token(jwtResponseDto.refreshToken())
-                .user(savedUser)
-                .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
-                .revoked(false)
-                .build();
-
+        RefreshTokenModel refreshTokenEntity = refreshTokenFactory.create(savedUser, jwtResponseDto.refreshToken());
         refreshTokenRepository.save(refreshTokenEntity);
         return jwtResponseDto;
     }
@@ -90,20 +87,15 @@ public class AuthServiceImpl implements AuthService {
                 user.getRole().name()
         );
 
-        RefreshTokenModel refreshTokenEntity = RefreshTokenModel.builder()
-                .token(tokens.refreshToken())
-                .user(user)
-                .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
-                .revoked(false)
-                .build();
-
+        RefreshTokenModel refreshTokenEntity = refreshTokenFactory.create(user, tokens.refreshToken());
         refreshTokenRepository.save(refreshTokenEntity);
 
         return tokens;
     }
 
     @Override
-    public void validateToken(String token) {
+    public void validateToken(String authHeader) {
+        String token = jwtTokenUtil.extractBearerToken(authHeader);
         if (!jwtService.isAccessToken(token)) {
             throw new TokenValidationException("Invalid token type. Expected access token");
         }
@@ -113,9 +105,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public JwtResponse refreshToken(String token) {
+    public JwtResponse refreshToken(String authHeader) {
+        String token = jwtTokenUtil.extractBearerToken(authHeader);
         if (!jwtService.isRefreshToken(token)) {
-            throw new RuntimeException("Invalid token type. Expected refresh token");
+            throw new TokenValidationException("Invalid token type. Expected refresh token");
         }
         RefreshTokenModel refreshTokenEntity = refreshTokenRepository
                 .findByToken(token)
@@ -145,17 +138,9 @@ public class AuthServiceImpl implements AuthService {
                 user.getRole().name()
         );
         String newRefreshToken = jwtService.generateRefreshToken(username);
-
-        RefreshTokenModel newRefreshTokenEntity = RefreshTokenModel.builder()
-                .token(newRefreshToken)
-                .user(user)
-                .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
-                .revoked(false)
-                .build();
-
+        RefreshTokenModel newRefreshTokenEntity = refreshTokenFactory.create(user, newRefreshToken);
         refreshTokenRepository.save(newRefreshTokenEntity);
 
         return new JwtResponse(newAccessToken, newRefreshToken);
-
     }
 }

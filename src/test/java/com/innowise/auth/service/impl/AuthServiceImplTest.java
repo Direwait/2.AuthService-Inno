@@ -6,9 +6,11 @@ import com.innowise.auth.database.enums.Role;
 import com.innowise.auth.database.model.RefreshTokenModel;
 import com.innowise.auth.database.model.UserCredential;
 import com.innowise.auth.service.UserCredentialService;
+import com.innowise.auth.util.JwtTokenUtil;
 import com.innowise.exception.TokenExpiredException;
 import com.innowise.exception.TokenRevokedException;
 import com.innowise.exception.TokenValidationException;
+import com.innowise.factory.RefreshTokenFactory;
 import com.innowise.security.jwt.CustomUserDetails;
 import com.innowise.security.jwt.JwtService;
 import com.innowise.security.jwt.dto.JwtResponse;
@@ -52,6 +54,10 @@ class AuthServiceImplTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private RefreshTokenFactory refreshTokenFactory;  // Добавлен мок для RefreshTokenFactory
+    @Mock
+    private JwtTokenUtil jwtTokenUtil;  // Добавлен мок для JwtTokenUtil
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -93,28 +99,31 @@ class AuthServiceImplTest {
         when(userCredentialRepository.save(any(UserCredential.class))).thenReturn(testUser);
         when(jwtService.generateAuthToken(any(), any(UUID.class), anyString()))
                 .thenReturn(jwtResponse);
+        when(refreshTokenFactory.create(any(UserCredential.class), anyString()))
+                .thenReturn(refreshTokenModel);
         when(refreshTokenRepository.save(any(RefreshTokenModel.class))).thenReturn(refreshTokenModel);
 
-        JwtResponse result = authService.saveUserCredentials(authRequest);
+        JwtResponse result = authService.saveUserCredentials(authRequest, Role.USER);
 
         assertThat(result).isEqualTo(jwtResponse);
         verify(userCredentialRepository).existsByUsername("testuser");
         verify(userCredentialRepository).save(any(UserCredential.class));
         verify(jwtService).generateAuthToken(any(), eq(userId), eq("USER"));
+        verify(refreshTokenFactory).create(eq(testUser), anyString());
         verify(refreshTokenRepository).save(any(RefreshTokenModel.class));
     }
 
     @Test
     void saveUserCredentials_ShouldThrowException_WhenUserAlreadyExists() {
-
         when(userCredentialRepository.existsByUsername("testuser")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.saveUserCredentials(authRequest))
+        assertThatThrownBy(() -> authService.saveUserCredentials(authRequest, Role.USER))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("already exists");
 
         verify(userCredentialRepository, never()).save(any(UserCredential.class));
         verify(jwtService, never()).generateAuthToken(any(), any(), anyString());
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
@@ -128,8 +137,9 @@ class AuthServiceImplTest {
                 .thenReturn(Optional.of(testUser));
         when(jwtService.generateAuthToken(any(), any(UUID.class), anyString()))
                 .thenReturn(jwtResponse);
+        when(refreshTokenFactory.create(any(UserCredential.class), anyString()))
+                .thenReturn(refreshTokenModel);
         when(refreshTokenRepository.save(any(RefreshTokenModel.class))).thenReturn(refreshTokenModel);
-
 
         JwtResponse result = authService.createToken(authRequest);
 
@@ -137,6 +147,7 @@ class AuthServiceImplTest {
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(userCredentialRepository).findByUsername("testuser");
         verify(jwtService).generateAuthToken(any(), eq(userId), eq("USER"));
+        verify(refreshTokenFactory).create(eq(testUser), anyString());
         verify(refreshTokenRepository).save(any(RefreshTokenModel.class));
     }
 
@@ -145,7 +156,6 @@ class AuthServiceImplTest {
         Authentication authentication = mock(Authentication.class);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-
         when(userCredentialRepository.findByUsername("testuser"))
                 .thenReturn(Optional.empty());
 
@@ -154,47 +164,62 @@ class AuthServiceImplTest {
                 .hasMessageContaining("User testuser not found");
 
         verify(jwtService, never()).generateAuthToken(any(), any(), anyString());
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void validateToken_ShouldDoNothing_WhenTokenIsValid() {
+        String authHeader = "Bearer valid.access.token";
         String token = "valid.access.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(token);
         when(jwtService.isAccessToken(token)).thenReturn(true);
         when(jwtService.isTokenValid(token)).thenReturn(true);
 
-        authService.validateToken(token);
+        authService.validateToken(authHeader);
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
         verify(jwtService).isAccessToken(token);
         verify(jwtService).isTokenValid(token);
     }
 
     @Test
     void validateToken_ShouldThrowException_WhenTokenIsNotAccessToken() {
+        String authHeader = "Bearer refresh.token";
         String token = "refresh.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(token);
         when(jwtService.isAccessToken(token)).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.validateToken(token))
+        assertThatThrownBy(() -> authService.validateToken(authHeader))
                 .isInstanceOf(TokenValidationException.class)
                 .hasMessageContaining("Invalid token type");
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isAccessToken(token);
         verify(jwtService, never()).isTokenValid(anyString());
     }
 
     @Test
     void validateToken_ShouldThrowException_WhenTokenIsInvalid() {
+        String authHeader = "Bearer invalid.token";
         String token = "invalid.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(token);
         when(jwtService.isAccessToken(token)).thenReturn(true);
         when(jwtService.isTokenValid(token)).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.validateToken(token))
+        assertThatThrownBy(() -> authService.validateToken(authHeader))
                 .isInstanceOf(TokenValidationException.class)
                 .hasMessageContaining("Token is invalid or expired");
-    }
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isAccessToken(token);
+        verify(jwtService).isTokenValid(token);
+    }
 
     @Test
     void refreshToken_ShouldReturnNewTokens_WhenRefreshTokenIsValid() {
+        String authHeader = "Bearer valid.refresh.token";
         String refreshToken = "valid.refresh.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.of(refreshTokenModel));
@@ -204,15 +229,19 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(any(), any(UUID.class), anyString()))
                 .thenReturn("new.access.token");
         when(jwtService.generateRefreshToken("testuser")).thenReturn("new.refresh.token");
+        when(refreshTokenFactory.create(any(UserCredential.class), anyString()))
+                .thenReturn(refreshTokenModel);
         when(refreshTokenRepository.save(any(RefreshTokenModel.class))).thenReturn(refreshTokenModel);
 
-        JwtResponse result = authService.refreshToken(refreshToken);
+        JwtResponse result = authService.refreshToken(authHeader);
 
         assertThat(result.accessToken()).isEqualTo("new.access.token");
         assertThat(result.refreshToken()).isEqualTo("new.refresh.token");
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
         verify(jwtService).isRefreshToken(refreshToken);
         verify(refreshTokenRepository).findByToken(refreshToken);
+        verify(refreshTokenFactory).create(eq(testUser), anyString());
         verify(refreshTokenRepository, times(2)).save(any(RefreshTokenModel.class));
         verify(jwtService).generateAccessToken(any(), eq(userId), eq("USER"));
         verify(jwtService).generateRefreshToken("testuser");
@@ -220,59 +249,87 @@ class AuthServiceImplTest {
 
     @Test
     void refreshToken_ShouldThrowException_WhenTokenIsNotRefreshToken() {
+        String authHeader = "Bearer access.token";
         String token = "access.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(token);
         when(jwtService.isRefreshToken(token)).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.refreshToken(token))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> authService.refreshToken(authHeader))
+                .isInstanceOf(TokenValidationException.class)
                 .hasMessageContaining("Invalid token type");
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(token);
         verify(refreshTokenRepository, never()).findByToken(anyString());
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void refreshToken_ShouldThrowException_WhenRefreshTokenNotFound() {
+        String authHeader = "Bearer unknown.token";
         String refreshToken = "unknown.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.refreshToken(refreshToken))
+        assertThatThrownBy(() -> authService.refreshToken(authHeader))
                 .isInstanceOf(TokenValidationException.class)
                 .hasMessageContaining("Refresh token not found");
+
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(refreshToken);
+        verify(refreshTokenRepository).findByToken(refreshToken);
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void refreshToken_ShouldThrowException_WhenRefreshTokenIsRevoked() {
+        String authHeader = "Bearer revoked.token";
         String refreshToken = "revoked.token";
         refreshTokenModel.setRevoked(true);
 
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.of(refreshTokenModel));
 
-        assertThatThrownBy(() -> authService.refreshToken(refreshToken))
+        assertThatThrownBy(() -> authService.refreshToken(authHeader))
                 .isInstanceOf(TokenRevokedException.class)
                 .hasMessageContaining("Refresh token has been revoked");
+
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(refreshToken);
+        verify(refreshTokenRepository).findByToken(refreshToken);
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void refreshToken_ShouldThrowException_WhenRefreshTokenIsExpired() {
+        String authHeader = "Bearer expired.token";
         String refreshToken = "expired.token";
         refreshTokenModel.setExpiryDate(Instant.now().minus(1, ChronoUnit.DAYS));
 
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.of(refreshTokenModel));
 
-        assertThatThrownBy(() -> authService.refreshToken(refreshToken))
+        assertThatThrownBy(() -> authService.refreshToken(authHeader))
                 .isInstanceOf(TokenExpiredException.class)
                 .hasMessageContaining("Refresh token has expired");
+
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(refreshToken);
+        verify(refreshTokenRepository).findByToken(refreshToken);
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void refreshToken_ShouldThrowException_WhenTokenIsInvalid() {
+        String authHeader = "Bearer invalid.refresh.token";
         String refreshToken = "invalid.refresh.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.of(refreshTokenModel));
@@ -280,14 +337,24 @@ class AuthServiceImplTest {
         when(userCredentialService.loadUserByUsername("testuser")).thenReturn(userDetails);
         when(jwtService.isTokenValid(refreshToken, userDetails)).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.refreshToken(refreshToken))
+        assertThatThrownBy(() -> authService.refreshToken(authHeader))
                 .isInstanceOf(TokenValidationException.class)
                 .hasMessageContaining("Refresh token is invalid");
+
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(refreshToken);
+        verify(refreshTokenRepository).findByToken(refreshToken);
+        verify(jwtService).extractUsername(refreshToken);
+        verify(userCredentialService).loadUserByUsername("testuser");
+        verify(jwtService).isTokenValid(refreshToken, userDetails);
+        verify(refreshTokenFactory, never()).create(any(), anyString());
     }
 
     @Test
     void refreshToken_ShouldRevokeOldToken_WhenRefreshing() {
+        String authHeader = "Bearer valid.refresh.token";
         String refreshToken = "valid.refresh.token";
+        when(jwtTokenUtil.extractBearerToken(authHeader)).thenReturn(refreshToken);
         when(jwtService.isRefreshToken(refreshToken)).thenReturn(true);
         when(refreshTokenRepository.findByToken(refreshToken))
                 .thenReturn(Optional.of(refreshTokenModel));
@@ -297,20 +364,29 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(any(), any(UUID.class), anyString()))
                 .thenReturn("new.access.token");
         when(jwtService.generateRefreshToken("testuser")).thenReturn("new.refresh.token");
+
+        RefreshTokenModel newRefreshTokenModel = RefreshTokenModel.builder()
+                .token("new.refresh.token")
+                .user(testUser)
+                .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
+
+        when(refreshTokenFactory.create(any(UserCredential.class), anyString()))
+                .thenReturn(newRefreshTokenModel);
         when(refreshTokenRepository.save(any(RefreshTokenModel.class)))
                 .thenReturn(refreshTokenModel)
-                .thenReturn(RefreshTokenModel.builder()
-                        .token("new.refresh.token")
-                        .user(testUser)
-                        .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
-                        .revoked(false)
-                        .build());
+                .thenReturn(newRefreshTokenModel);
 
-        authService.refreshToken(refreshToken);
+        authService.refreshToken(authHeader);
 
         assertThat(refreshTokenModel.isRevoked()).isTrue();
 
+        verify(jwtTokenUtil).extractBearerToken(authHeader);
+        verify(jwtService).isRefreshToken(refreshToken);
+        verify(refreshTokenRepository).findByToken(refreshToken);
         verify(refreshTokenRepository).save(refreshTokenModel);
+        verify(refreshTokenFactory).create(eq(testUser), anyString());
         verify(refreshTokenRepository, times(2)).save(any(RefreshTokenModel.class));
     }
 }

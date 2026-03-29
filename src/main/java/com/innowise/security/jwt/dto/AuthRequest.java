@@ -12,7 +12,7 @@ import lombok.Setter;
 public class AuthRequest {
 
     @NotBlank(message = "Username is required")
-    @Size(min = 4, max = 20, message = "Username must be between 3 and 20 characters")
+    @Size(min = 4, max = 20, message = "Username must be between 4 and 20 characters")
     private String username;
 
     @NotBlank(message = "Password is required")
