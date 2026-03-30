@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS user_credential (
+    id UUID PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+
+    updated_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS refresh_token (
+    id UUID PRIMARY KEY,
+    token VARCHAR(500) NOT NULL UNIQUE,
+    user_id UUID REFERENCES user_credential(id) ON DELETE CASCADE,
+    expiry_date TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE NOT NULL,
+
+    updated_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
