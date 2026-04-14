@@ -4,6 +4,8 @@ import com.innowise.security.jwt.dto.AuthRequest;
 import com.innowise.security.jwt.dto.JwtResponse;
 import org.springframework.http.ResponseEntity;
 
+import java.util.UUID;
+
 public interface AuthController {
 
     /**
@@ -14,6 +16,14 @@ public interface AuthController {
      * @throws org.springframework.security.core.AuthenticationException if authentication fails
      */
     ResponseEntity<JwtResponse> createToken(AuthRequest loginRequest);
+
+    /**
+     * Deletes a user by ID (used for registration rollback)
+     *
+     * @param userId the ID of the user to delete
+     * @return ResponseEntity with 204 status code
+     */
+    ResponseEntity<Void> deleteUser(UUID userId);
 
     /**
      * Registers a new user and returns authentication tokens

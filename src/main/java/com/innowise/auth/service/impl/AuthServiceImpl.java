@@ -27,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -142,5 +143,14 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(newRefreshTokenEntity);
 
         return new JwtResponse(newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID userId) {
+        if (!userCredentialRepository.existsById(userId)) {
+            throw new EntityNotFoundException("User not found with id: " + userId);
+        }
+        userCredentialRepository.deleteById(userId);
     }
 }

@@ -55,9 +55,9 @@ class AuthServiceImplTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
-    private RefreshTokenFactory refreshTokenFactory;  // Добавлен мок для RefreshTokenFactory
+    private RefreshTokenFactory refreshTokenFactory;
     @Mock
-    private JwtTokenUtil jwtTokenUtil;  // Добавлен мок для JwtTokenUtil
+    private JwtTokenUtil jwtTokenUtil;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -388,5 +388,28 @@ class AuthServiceImplTest {
         verify(refreshTokenRepository).save(refreshTokenModel);
         verify(refreshTokenFactory).create(eq(testUser), anyString());
         verify(refreshTokenRepository, times(2)).save(any(RefreshTokenModel.class));
+    }
+
+    @Test
+    void deleteById_ShouldDeleteUser_WhenUserExists() {
+        when(userCredentialRepository.existsById(userId)).thenReturn(true);
+        doNothing().when(userCredentialRepository).deleteById(userId);
+
+        authService.deleteById(userId);
+
+        verify(userCredentialRepository).existsById(userId);
+        verify(userCredentialRepository).deleteById(userId);
+    }
+
+    @Test
+    void deleteById_ShouldThrowEntityNotFoundException_WhenUserDoesNotExist() {
+        when(userCredentialRepository.existsById(userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.deleteById(userId))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("User not found with id: " + userId);
+
+        verify(userCredentialRepository).existsById(userId);
+        verify(userCredentialRepository, never()).deleteById(any());
     }
 }
