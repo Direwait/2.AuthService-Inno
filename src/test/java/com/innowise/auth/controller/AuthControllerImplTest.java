@@ -31,12 +31,13 @@ class AuthControllerImplTest extends BaseIntegrationTest {
         request = AuthRequest.builder()
                 .username("testuser")
                 .password("password123")
+                .email("template@mail.com")
                 .build();
     }
 
     @Test
     void register_ShouldReturnTokens() throws Exception {
-        MvcResult result = mockMvc.perform(post("/auth/register")
+        MvcResult result = mockMvc.perform(post("/tokens/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -52,12 +53,12 @@ class AuthControllerImplTest extends BaseIntegrationTest {
 
     @Test
     void login_ShouldReturnTokens() throws Exception {
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/tokens/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        MvcResult result = mockMvc.perform(post("/auth/login")
+        MvcResult result = mockMvc.perform(post("/tokens/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -73,7 +74,7 @@ class AuthControllerImplTest extends BaseIntegrationTest {
 
     @Test
     void validate_ShouldReturnOk_WhenTokenValid() throws Exception {
-        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+        MvcResult registerResult = mockMvc.perform(post("/tokens/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -83,14 +84,14 @@ class AuthControllerImplTest extends BaseIntegrationTest {
                 registerResult.getResponse().getContentAsString(),
                 JwtResponse.class);
 
-        mockMvc.perform(post("/auth/validate")
+        mockMvc.perform(post("/tokens/validate")
                         .header("Authorization", "Bearer " + tokens.accessToken()))
                 .andExpect(status().isOk());
     }
 
     @Test
     void refresh_ShouldReturnNewTokens() throws Exception {
-        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+        MvcResult registerResult = mockMvc.perform(post("/tokens/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -100,7 +101,7 @@ class AuthControllerImplTest extends BaseIntegrationTest {
                 registerResult.getResponse().getContentAsString(),
                 JwtResponse.class);
 
-        MvcResult refreshResult = mockMvc.perform(post("/auth/refresh")
+        MvcResult refreshResult = mockMvc.perform(post("/tokens/refresh")
                         .header("Authorization", "Bearer " + tokens.refreshToken()))
                 .andExpect(status().isOk())
                 .andReturn();

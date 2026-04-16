@@ -19,7 +19,8 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,7 +31,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.CONFLICT.value())
                 .error("Conflict")
                 .message(e.getMessage())
@@ -43,7 +44,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResponseEntity<ErrorResponse> handleUserNotFound(EntityNotFoundException e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.NOT_FOUND.value())
                 .error("Not Found")
                 .message(e.getMessage())
@@ -56,7 +57,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResponseEntity<ErrorResponse> handleTokenExceptions(RuntimeException e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.UNAUTHORIZED.value())
                 .error("Unauthorized")
                 .message(e.getMessage())
@@ -69,7 +70,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResponseEntity<ErrorResponse> handleForbidden(AuthenticationException e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.UNAUTHORIZED.value())
                 .error("Unauthorized")
                 .message("Authentication Failed: " + e.getMessage())
@@ -82,7 +83,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.FORBIDDEN.value())
                 .error("Forbidden")
                 .message("Access denied: " + e.getMessage())
@@ -99,7 +100,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")
                 .message(e.getMessage())
@@ -120,7 +121,7 @@ public class ExceptionHandlerAdvice {
         });
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Validation Failed")
                 .message("Input validation failed")
@@ -135,7 +136,7 @@ public class ExceptionHandlerAdvice {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception e, HttpServletRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now().toString())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error("Internal Server Error")
                 .message("An internal server error occurred:" + e.getMessage())

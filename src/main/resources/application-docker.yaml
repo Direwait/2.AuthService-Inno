@@ -1,9 +1,6 @@
 spring:
   config:
     import: optional:file:.env[.properties]
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
 
   datasource:
     driver-class-name: org.postgresql.Driver
