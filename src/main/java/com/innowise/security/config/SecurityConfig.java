@@ -31,10 +31,10 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/tokens/login").permitAll()
-                        .requestMatchers("/tokens/register").permitAll()
-                        .requestMatchers("/tokens/refresh").permitAll()
-                        .requestMatchers("/tokens/rollback/refresh").permitAll()
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/auth/register").permitAll()
+                        .requestMatchers("/auth/refresh").permitAll()
+                        .requestMatchers("/auth/rollback/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
                         .anyRequest().authenticated()

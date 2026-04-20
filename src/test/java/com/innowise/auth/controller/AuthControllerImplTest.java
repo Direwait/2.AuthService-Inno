@@ -1,7 +1,7 @@
 package com.innowise.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import com.innowise.security.jwt.dto.JwtResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,11 +24,11 @@ class AuthControllerImplTest extends BaseIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private AuthRequest request;
+    private RegisterRequest request;
 
     @BeforeEach
     void setUp() {
-        request = AuthRequest.builder()
+        request = RegisterRequest.builder()
                 .username("testuser")
                 .password("password123")
                 .email("template@mail.com")
@@ -37,7 +37,7 @@ class AuthControllerImplTest extends BaseIntegrationTest {
 
     @Test
     void register_ShouldReturnTokens() throws Exception {
-        MvcResult result = mockMvc.perform(post("/tokens/register")
+        MvcResult result = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -53,12 +53,12 @@ class AuthControllerImplTest extends BaseIntegrationTest {
 
     @Test
     void login_ShouldReturnTokens() throws Exception {
-        mockMvc.perform(post("/tokens/register")
+        mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        MvcResult result = mockMvc.perform(post("/tokens/login")
+        MvcResult result = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -74,7 +74,7 @@ class AuthControllerImplTest extends BaseIntegrationTest {
 
     @Test
     void validate_ShouldReturnOk_WhenTokenValid() throws Exception {
-        MvcResult registerResult = mockMvc.perform(post("/tokens/register")
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -84,14 +84,14 @@ class AuthControllerImplTest extends BaseIntegrationTest {
                 registerResult.getResponse().getContentAsString(),
                 JwtResponse.class);
 
-        mockMvc.perform(post("/tokens/validate")
+        mockMvc.perform(post("/auth/validate")
                         .header("Authorization", "Bearer " + tokens.accessToken()))
                 .andExpect(status().isOk());
     }
 
     @Test
     void refresh_ShouldReturnNewTokens() throws Exception {
-        MvcResult registerResult = mockMvc.perform(post("/tokens/register")
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ class AuthControllerImplTest extends BaseIntegrationTest {
                 registerResult.getResponse().getContentAsString(),
                 JwtResponse.class);
 
-        MvcResult refreshResult = mockMvc.perform(post("/tokens/refresh")
+        MvcResult refreshResult = mockMvc.perform(post("/auth/refresh")
                         .header("Authorization", "Bearer " + tokens.refreshToken()))
                 .andExpect(status().isOk())
                 .andReturn();
