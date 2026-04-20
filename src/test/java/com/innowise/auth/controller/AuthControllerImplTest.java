@@ -1,7 +1,7 @@
 package com.innowise.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import com.innowise.security.jwt.dto.JwtResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,13 +24,14 @@ class AuthControllerImplTest extends BaseIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private AuthRequest request;
+    private RegisterRequest request;
 
     @BeforeEach
     void setUp() {
-        request = AuthRequest.builder()
+        request = RegisterRequest.builder()
                 .username("testuser")
                 .password("password123")
+                .email("template@mail.com")
                 .build();
     }
 

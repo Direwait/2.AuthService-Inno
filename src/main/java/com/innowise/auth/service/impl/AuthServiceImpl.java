@@ -14,8 +14,9 @@ import com.innowise.exception.TokenValidationException;
 import com.innowise.exception.UserAlreadyExistsException;
 import com.innowise.security.jwt.CustomUserDetails;
 import com.innowise.security.jwt.JwtService;
-import com.innowise.security.jwt.dto.JwtResponse;
 import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.JwtResponse;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import com.innowise.factory.RefreshTokenFactory;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     @Override
-    public JwtResponse saveUserCredentials(AuthRequest request, Role role) {
+    public JwtResponse saveUserCredentials(RegisterRequest request, Role role) {
         if (userCredentialRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("User with username '" + request.getUsername() + "' already exists");
         }
