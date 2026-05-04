@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service-inno
+  labels:
+    app: auth-service-inno
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service-inno
+  template:
+    metadata:
+      labels:
+        app: auth-service-inno
+    spec:
+      containers:
+        - name: auth-service
+          image: direwait/authservise-inno:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_NAME
+              value: "authdb"
+            - name: DB_USERNAME
+              value: "postgres"
+            - name: DB_PASSWORD
+              value: "postgres"
+            - name: JWT_SECRET
+              value: "2d0f8dd43218c7413bd3e72f7be624838c8120b50406973cd05b06d08e93961f"
+            - name: JWT_EXPIRATION
+              value: "3600000"
+            - name: REFRESH_EXPIRATION
+              value: "86400000"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
