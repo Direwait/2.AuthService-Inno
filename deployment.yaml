@@ -20,6 +20,8 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: DB_HOST
+              value: "postgres-auth"
             - name: DB_NAME
               value: "authdb"
             - name: DB_USERNAME
