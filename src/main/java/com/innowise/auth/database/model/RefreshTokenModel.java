@@ -3,6 +3,9 @@ package com.innowise.auth.database.model;
 import com.innowise.auth.database.auditing.Auditable;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -25,6 +28,7 @@ public class RefreshTokenModel extends Auditable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private UserCredential user;
 
     @Column(name = "expiry_date", nullable = false)

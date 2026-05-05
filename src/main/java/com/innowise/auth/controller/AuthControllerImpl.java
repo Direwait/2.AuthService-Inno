@@ -2,8 +2,9 @@ package com.innowise.auth.controller;
 
 import com.innowise.auth.database.enums.Role;
 import com.innowise.auth.service.AuthService;
-import com.innowise.security.jwt.dto.JwtResponse;
 import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.JwtResponse;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,27 +23,27 @@ public class AuthControllerImpl implements AuthController {
     @Override
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
         authService.deleteById(userId);
-        return null;
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")
     @Override
-    public ResponseEntity<JwtResponse> createToken(@Valid @RequestBody AuthRequest loginRequest){
-        JwtResponse jwtResponseDto = authService.createToken(loginRequest);
+    public ResponseEntity<JwtResponse> createToken(@Valid @RequestBody AuthRequest authRequest){
+        JwtResponse jwtResponseDto = authService.createToken(authRequest);
         return ResponseEntity.ok(jwtResponseDto);
     }
 
     @PostMapping("/register")
     @Override
-    public ResponseEntity<JwtResponse> saveUserCredentials(@Valid @RequestBody AuthRequest authRequest) {
-        JwtResponse jwtResponseDto = authService.saveUserCredentials(authRequest, Role.USER);
+    public ResponseEntity<JwtResponse> saveUserCredentials(@Valid @RequestBody RegisterRequest registerRequest) {
+        JwtResponse jwtResponseDto = authService.saveUserCredentials(registerRequest, Role.USER);
         return ResponseEntity.ok(jwtResponseDto);
     }
 
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
     @Override
-    public ResponseEntity<JwtResponse> registerAdmin(@Valid @RequestBody AuthRequest authRequest) {
+    public ResponseEntity<JwtResponse> registerAdmin(@Valid @RequestBody RegisterRequest authRequest) {
         JwtResponse jwtResponseDto = authService.saveUserCredentials(authRequest, Role.ADMIN);
         return ResponseEntity.ok(jwtResponseDto);
     }

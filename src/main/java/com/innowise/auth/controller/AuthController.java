@@ -1,6 +1,7 @@
 package com.innowise.auth.controller;
 
 import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import com.innowise.security.jwt.dto.JwtResponse;
 import org.springframework.http.ResponseEntity;
 
@@ -11,11 +12,11 @@ public interface AuthController {
     /**
      * Authenticates a user and generates access and refresh tokens
      *
-     * @param loginRequest the authentication request containing username and password
+     * @param authRequest the authentication request containing username and password, email
      * @return ResponseEntity containing JWT access and refresh tokens
      * @throws org.springframework.security.core.AuthenticationException if authentication fails
      */
-    ResponseEntity<JwtResponse> createToken(AuthRequest loginRequest);
+    ResponseEntity<JwtResponse> createToken(AuthRequest authRequest);
 
     /**
      * Deletes a user by ID (used for registration rollback)
@@ -28,11 +29,11 @@ public interface AuthController {
     /**
      * Registers a new user and returns authentication tokens
      *
-     * @param authRequest the registration request containing username and password
+     * @param registerRequest the registration request containing username and password
      * @return ResponseEntity containing JWT access and refresh tokens for the new user
      * @throws RuntimeException if user with given username already exists
      */
-    ResponseEntity<JwtResponse> saveUserCredentials(AuthRequest authRequest);
+    ResponseEntity<JwtResponse> saveUserCredentials(RegisterRequest registerRequest);
 
     /**
      * Registers a new admin user (requires admin privileges)
@@ -42,7 +43,7 @@ public interface AuthController {
      * @throws com.innowise.exception.UserAlreadyExistsException if user with given username already exists
      * @throws org.springframework.security.access.AccessDeniedException if the current user does not have ADMIN role
      */
-    ResponseEntity<JwtResponse> registerAdmin(AuthRequest authRequest);
+    ResponseEntity<JwtResponse> registerAdmin(RegisterRequest authRequest);
 
     /**
      * Validates the provided authentication token

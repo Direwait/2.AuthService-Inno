@@ -13,8 +13,9 @@ import com.innowise.exception.TokenValidationException;
 import com.innowise.factory.RefreshTokenFactory;
 import com.innowise.security.jwt.CustomUserDetails;
 import com.innowise.security.jwt.JwtService;
-import com.innowise.security.jwt.dto.JwtResponse;
 import com.innowise.security.jwt.dto.AuthRequest;
+import com.innowise.security.jwt.dto.JwtResponse;
+import com.innowise.security.jwt.dto.RegisterRequest;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,7 @@ class AuthServiceImplTest {
 
     private UserCredential testUser;
     private AuthRequest authRequest;
+    private RegisterRequest registerRequest;
     private JwtResponse jwtResponse;
     private RefreshTokenModel refreshTokenModel;
     private UserDetails userDetails;
@@ -82,6 +84,11 @@ class AuthServiceImplTest {
                 .username("testuser")
                 .password("password123")
                 .build();
+        registerRequest = RegisterRequest.builder()
+                .username("testuser")
+                .password("password123")
+                .build();
+
         jwtResponse = new JwtResponse("access.token", "refresh.token");
         refreshTokenModel = RefreshTokenModel.builder()
                 .token("refresh.token")
@@ -103,7 +110,7 @@ class AuthServiceImplTest {
                 .thenReturn(refreshTokenModel);
         when(refreshTokenRepository.save(any(RefreshTokenModel.class))).thenReturn(refreshTokenModel);
 
-        JwtResponse result = authService.saveUserCredentials(authRequest, Role.USER);
+        JwtResponse result = authService.saveUserCredentials(registerRequest, Role.USER);
 
         assertThat(result).isEqualTo(jwtResponse);
         verify(userCredentialRepository).existsByUsername("testuser");
@@ -117,7 +124,7 @@ class AuthServiceImplTest {
     void saveUserCredentials_ShouldThrowException_WhenUserAlreadyExists() {
         when(userCredentialRepository.existsByUsername("testuser")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.saveUserCredentials(authRequest, Role.USER))
+        assertThatThrownBy(() -> authService.saveUserCredentials(registerRequest, Role.USER))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("already exists");
 
